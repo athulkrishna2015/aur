@@ -102,8 +102,18 @@ for dir in *-bin; do
 			failed+=("$dir")
 			continue
 		fi
+		# Copy PKGBUILD, .SRCINFO and any extra source files (icons, patches, ...)
+		# so the AUR hook finds every file referenced by source=/source_<arch>=.
 		cp "$dir/PKGBUILD" "$dir/.SRCINFO" "$work/$dir/"
-		git -C "$work/$dir" add PKGBUILD .SRCINFO
+		for extra in "$dir"/*; do
+			[[ -f "$extra" ]] || continue
+			case "$(basename "$extra")" in
+				PKGBUILD|.SRCINFO) continue ;;
+				*.tar.gz|*.tar.zst|*.tar.xz|*.pkg.tar.*) continue ;;
+			esac
+			cp "$extra" "$work/$dir/"
+		done
+		git -C "$work/$dir" add -A
 		if git -C "$work/$dir" diff --cached --quiet; then
 			rm -rf "$work"
 			printf '%s: AUR already has %s-%s; no push needed\n' "$dir" "$latest" "$pkgrel"
